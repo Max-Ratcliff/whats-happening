@@ -1,81 +1,77 @@
-import React, { useState, useEffect } from "react"; // Added useState, useEffect
+import React, { useState, useEffect } from "react";
+import { format } from "date-fns"; // Import date-fns for formatting
 import PageLayout from "@/components/layout/PageLayout";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
-import { Calendar, Heart, Loader2 } from "lucide-react"; // Added Loader2
+import { Calendar, Heart, Loader2, Users as UsersIcon } from "lucide-react"; // Renamed Users to UsersIcon
 import {
   collection,
   getDocs,
   query,
   orderBy,
-  Timestamp, // For type annotation and conversion
+  Timestamp, // Firestore Timestamp for type and conversion
   DocumentData,
+  where,     // For filtering upcoming events
+  limit      // For limiting the number of events
 } from "firebase/firestore";
 import { db } from "@/lib/firebase"; // Your Firebase db instance
 
-// Define the structure of a club post fetched from Firestore
+// Interface for Club Posts (already in your file)
 interface ClubPost {
-  id: string; // Firestore document ID
-  clubId: string; // Matches your updated Firestore field
+  id: string;
+  clubId: string;
   clubName: string;
   clubAvatar?: string;
   caption: string;
-  imageURL?: string; // Adjusted to imageURL (all caps)
-  timestamp: Timestamp; // Expecting a Firestore Timestamp object
+  imageURL?: string;
+  timestamp: Timestamp;
   likesCount: number;
   commentsCount: number;
 }
 
-/**
- * Dashboard/Home page component
- * Shows a feed of club updates and upcoming events
- */
+// Interface for Fetched Events (can be shared with CalendarPage or defined here)
+interface FetchedEvent {
+  id: string;
+  title: string;
+  description?: string;
+  startTime: Timestamp;
+  endTime?: Timestamp;
+  location: string;
+  clubId: string;
+  clubName: string;
+  clubLogo?: string;
+}
+
 const DashboardPage: React.FC = () => {
+  // State for Club Posts (from your existing code)
   const [fetchedClubPosts, setFetchedClubPosts] = useState<ClubPost[]>([]);
-  const [isLoading, setIsLoading] = useState<boolean>(true);
-  const [error, setError] = useState<string | null>(null);
+  const [isLoadingPosts, setIsLoadingPosts] = useState<boolean>(true); // Renamed for clarity
+  const [postsError, setPostsError] = useState<string | null>(null); // Renamed for clarity
 
-  // Mock data for upcoming events - this can remain or be fetched similarly
-  const upcomingEvents = [
-    {
-      id: 1,
-      title: "Robotics Workshop",
-      date: "May 20, 2025", // Note: These are static dates for the example
-      time: "3:00 PM",
-      location: "Engineering 2, Room 180",
-      club: "Robotics Club",
-    },
-    {
-      id: 2,
-      title: "Photography Hike",
-      date: "May 21, 2025",
-      time: "10:00 AM",
-      location: "UCSC Arboretum",
-      club: "Photography Club",
-    },
-    // Add more mock events if needed
-  ];
+  // State for Upcoming Events
+  const [fetchedUpcomingEvents, setFetchedUpcomingEvents] = useState<FetchedEvent[]>([]);
+  const [isLoadingEvents, setIsLoadingEvents] = useState<boolean>(true);
+  const [eventsError, setEventsError] = useState<string | null>(null);
 
+  // Fetch Club Posts (your existing useEffect)
   useEffect(() => {
     const fetchPosts = async () => {
-      setIsLoading(true);
-      setError(null);
+      setIsLoadingPosts(true);
+      setPostsError(null);
       try {
         const postsRef = collection(db, "clubPosts");
-        // Query to order posts by timestamp in descending order (newest first)
         const q = query(postsRef, orderBy("timestamp", "desc"));
         const snapshot = await getDocs(q);
-
         const postsData: ClubPost[] = snapshot.docs.map((doc): ClubPost => {
-          const data = doc.data() as DocumentData; // Cast to DocumentData for type safety
+          const data = doc.data() as DocumentData;
           return {
             id: doc.id,
-            clubId: data.clubId || "", // Ensure this matches your Firestore field name
+            clubId: data.clubId || "",
             clubName: data.clubName || "Unknown Club",
             clubAvatar: data.clubAvatar,
             caption: data.caption || "No content available.",
-            imageURL: data.imageURL, // Adjusted to use imageURL from Firestore
-            timestamp: data.timestamp as Timestamp, // Critical: data.timestamp must be a Firestore Timestamp object
+            imageURL: data.imageURL,
+            timestamp: data.timestamp as Timestamp,
             likesCount: data.likesCount || 0,
             commentsCount: data.commentsCount || 0,
           };
@@ -83,28 +79,63 @@ const DashboardPage: React.FC = () => {
         setFetchedClubPosts(postsData);
       } catch (err) {
         console.error("Error fetching club posts:", err);
-        setError(
-          err instanceof Error ? err.message : "Failed to fetch posts."
-        );
+        setPostsError(err instanceof Error ? err.message : "Failed to fetch posts.");
       } finally {
-        setIsLoading(false);
+        setIsLoadingPosts(false);
       }
     };
-
     fetchPosts();
-  }, []); // Empty dependency array means this effect runs once on component mount
+  }, []);
 
-  // Helper function to format Firestore Timestamp for display
+  // Fetch Upcoming Events
+  useEffect(() => {
+    const fetchUpcomingEvents = async () => {
+      setIsLoadingEvents(true);
+      setEventsError(null);
+      try {
+        const eventsRef = collection(db, "events"); // Use "events" collection
+        const now = new Date(); // Get current date and time
+        const q = query(
+          eventsRef,
+          where("startTime", ">=", now), // Filter for events starting from now onwards
+          orderBy("startTime", "asc"),   // Order by start time (soonest first)
+          limit(4)                       // Limit to, for example, 4 upcoming events
+        );
+        const snapshot = await getDocs(q);
+        const eventsData: FetchedEvent[] = snapshot.docs.map((doc): FetchedEvent => {
+          const data = doc.data() as DocumentData;
+          return {
+            id: doc.id,
+            title: data.title || "Untitled Event",
+            description: data.description,
+            startTime: data.startTime as Timestamp, // Expecting Firestore Timestamp
+            endTime: data.endTime as Timestamp,   // Optional
+            location: data.location || "TBD",
+            clubId: data.clubId || "",
+            clubName: data.clubName || "Unknown Club",
+            clubLogo: data.clubLogo,
+          };
+        });
+        setFetchedUpcomingEvents(eventsData);
+      } catch (err) {
+        console.error("Error fetching upcoming events:", err);
+        setEventsError(err instanceof Error ? err.message : "Failed to fetch upcoming events.");
+        // Optionally use toast here: toast.error("Could not load upcoming events.");
+      } finally {
+        setIsLoadingEvents(false);
+      }
+    };
+    fetchUpcomingEvents();
+  }, []);
+
   const formatPostTimestamp = (timestamp: Timestamp | undefined): string => {
-    if (!timestamp) return "A while ago"; // Fallback if timestamp is undefined
-    // For a simple display:
+    if (!timestamp) return "A while ago";
     const date = timestamp.toDate();
-    // More sophisticated relative time formatting can be added here (e.g., using date-fns library)
     return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) + " at " + date.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true });
   };
 
-
-  if (isLoading) {
+  // Combined loading state for the main content area (posts)
+  if (isLoadingPosts) {
     return (
       <PageLayout>
         <div className="app-container py-6 flex justify-center items-center min-h-[calc(100vh-200px)]">
@@ -115,13 +146,14 @@ const DashboardPage: React.FC = () => {
     );
   }
 
-  if (error) {
+  // Error state for posts (main content)
+   if (postsError) {
     return (
       <PageLayout>
         <div className="app-container py-6 text-center">
           <p className="text-red-500 text-xl mb-3">Could not load posts.</p>
-          <p className="text-gray-600 mb-4">{error}</p>
-          <Button onClick={() => { /* Implement refetch logic if desired */ }}>Try Again</Button>
+          <p className="text-gray-600 mb-4">{postsError}</p>
+          <Button onClick={() => { /* Implement refetchPosts logic */ }}>Try Again</Button>
         </div>
       </PageLayout>
     );
@@ -129,23 +161,22 @@ const DashboardPage: React.FC = () => {
 
   return (
     <PageLayout>
-      <div className="app-container py-6">
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Feed Column */}
+      <div className="app-container py-6 px-2 sm:px-4">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 lg:gap-8">
+          {/* Feed Column (Club Posts) */}
           <div className="lg:col-span-2 space-y-6">
-            <h1 className="text-2xl font-bold">Latest Updates</h1>
-
-            {fetchedClubPosts.length === 0 ? (
-              <Card className="slugscene-card">
+            <h1 className="text-3xl font-bold text-ucscBlue mb-4">Latest Updates</h1>
+            {fetchedClubPosts.length === 0 && !isLoadingPosts ? (
+              <Card className="slugscene-card shadow">
                 <CardContent className="pt-6 text-center text-gray-500">
                   <p>No club updates yet. Check back soon!</p>
                 </CardContent>
               </Card>
             ) : (
               fetchedClubPosts.map((post) => (
-                <Card key={post.id} className="slugscene-card">
+                <Card key={post.id} className="slugscene-card shadow-lg hover:shadow-xl transition-shadow">
                   <CardHeader className="flex flex-row items-center space-x-4 pb-3">
-                    <div className="h-12 w-12 rounded-full overflow-hidden bg-slate-200"> {/* Placeholder background */}
+                    <div className="h-12 w-12 rounded-full overflow-hidden bg-slate-200 flex-shrink-0">
                       {post.clubAvatar ? (
                         <img
                           src={post.clubAvatar}
@@ -154,25 +185,22 @@ const DashboardPage: React.FC = () => {
                         />
                       ) : (
                         <div className="w-full h-full flex items-center justify-center text-slate-500 text-xl font-semibold">
-                           {post.clubName?.charAt(0).toUpperCase()} {/* Fallback to first letter of club name */}
+                          {post.clubName?.charAt(0).toUpperCase()}
                         </div>
                       )}
                     </div>
                     <div>
-                      <h3 className="font-bold">{post.clubName}</h3>
+                      <h3 className="font-bold text-ucscBlue">{post.clubName}</h3>
                       <p className="text-sm text-gray-500">
                         {formatPostTimestamp(post.timestamp)}
                       </p>
                     </div>
                   </CardHeader>
-
                   <CardContent>
-                    <div className="space-y-4">
-                      <p>{post.caption}</p> {/* Was post.content in mock */}
-
-                      {/* Optional Post Image - uses imageURL */}
+                    <div className="space-y-3">
+                      <p className="text-gray-800">{post.caption}</p>
                       {post.imageURL && (
-                        <div className="rounded-md overflow-hidden border"> {/* Added border for better definition */}
+                        <div className="rounded-lg overflow-hidden border">
                           <img
                             src={post.imageURL}
                             alt="Post content"
@@ -180,19 +208,16 @@ const DashboardPage: React.FC = () => {
                           />
                         </div>
                       )}
-
-                      {/* Post Actions */}
-                      <div className="flex items-center space-x-6 pt-2">
-                        <button className="flex items-center text-gray-500 hover:text-ucscBlue transition-colors">
-                          <Heart className="h-5 w-5 mr-1" />
-                          <span>{post.likesCount}</span> {/* Was post.likes in mock */}
+                      <div className="flex items-center space-x-6 pt-2 text-sm">
+                        <button className="flex items-center text-gray-600 hover:text-ucscBlue transition-colors">
+                          <Heart className="h-4 w-4 mr-1.5" />
+                          <span>{post.likesCount} Likes</span>
                         </button>
-                        <button className="text-gray-500 hover:text-ucscBlue transition-colors">
-                          {post.commentsCount} Comments {/* Was post.comments in mock */}
+                        <button className="text-gray-600 hover:text-ucscBlue transition-colors">
+                          {post.commentsCount} Comments
                         </button>
                         <div className="ml-auto">
-                          {/* This button would ideally link to the club's page using post.clubId */}
-                          <Button variant="outline" size="sm">
+                          <Button variant="outline" size="sm" onClick={() => alert(`Maps to club ${post.clubId}`)}>
                             View Club
                           </Button>
                         </div>
@@ -204,52 +229,63 @@ const DashboardPage: React.FC = () => {
             )}
           </div>
 
-          {/* Sidebar - Upcoming Events */}
-          <div className="space-y-6">
-            <div className="sticky top-20"> {/* Adjust top-X as needed for your header height */}
-              <Card>
+          {/* Sidebar */}
+          <div className="lg:col-span-1 space-y-6">
+            <div className="sticky top-20"> {/* Adjust top-X based on your header height */}
+              <Card className="shadow-lg">
                 <CardHeader>
-                  <h2 className="text-xl font-semibold flex items-center">
-                    <Calendar className="w-5 h-5 mr-2 text-ucscBlue" />
+                  <h2 className="text-xl font-semibold flex items-center text-ucscBlue">
+                    <Calendar className="w-5 h-5 mr-2" />
                     Upcoming Events
                   </h2>
                 </CardHeader>
                 <CardContent className="p-0">
-                  <div className="divide-y divide-gray-100">
-                    {upcomingEvents.length === 0 ? (
-                        <p className="px-6 py-4 text-sm text-gray-500">No upcoming events listed.</p>
+                  <div className="divide-y divide-gray-100 max-h-[300px] overflow-y-auto"> {/* Scrollable event list */}
+                    {isLoadingEvents ? (
+                      <div className="p-4 text-center">
+                        <Loader2 className="h-6 w-6 animate-spin text-ucscBlue inline-block" />
+                      </div>
+                    ) : eventsError ? (
+                      <p className="px-6 py-4 text-sm text-red-500">{eventsError}</p>
+                    ) : fetchedUpcomingEvents.length === 0 ? (
+                      <p className="px-6 py-4 text-sm text-gray-500">No upcoming events.</p>
                     ) : (
-                        upcomingEvents.map((event) => (
+                      fetchedUpcomingEvents.map((event) => (
                         <div
-                            key={event.id}
-                            className="px-6 py-4 hover:bg-gray-50 transition-colors duration-150"
+                          key={event.id}
+                          className="px-5 py-3 hover:bg-slate-50 transition-colors"
+                          // Optional: onClick={() => navigateToEventDetails(event.id)}
                         >
-                            <h3 className="font-medium">{event.title}</h3>
-                            <p className="text-sm text-gray-500">
-                            {event.date} • {event.time}
-                            </p>
-                            <p className="text-sm text-gray-500">
-                            {event.club} • {event.location}
-                            </p>
+                          <h4 className="font-semibold text-ucscBlue text-md">{event.title}</h4>
+                          <p className="text-xs text-gray-500">
+                            {event.clubName}
+                          </p>
+                          <p className="text-sm text-gray-700 mt-0.5">
+                            {event.startTime ? format(event.startTime.toDate(), "MMM d, p") : "Date TBD"}
+                          </p>
+                          <p className="text-xs text-gray-500">{event.location}</p>
                         </div>
-                        ))
+                      ))
                     )}
                   </div>
                 </CardContent>
               </Card>
-
-              <Card className="mt-6">
-                <CardContent className="pt-6">
-                  <h3 className="font-semibold mb-4">Popular Categories</h3>
+              
+              <Card className="mt-6 shadow-lg">
+                <CardHeader>
+                     <h3 className="text-xl font-semibold text-ucscBlue">Popular Categories</h3>
+                </CardHeader>
+                <CardContent>
                   <div className="flex flex-wrap gap-2">
                     {[
-                      "Academic", "Arts", "Sports", "Tech", "Social", "Cultural", "Professional", "Service"
+                      "Academic", "Arts", "Sports", "Tech", "Social", "Cultural", "Professional"
                     ].map((category) => (
-                      <Button
-                        key={category}
-                        variant="outline"
-                        className="text-sm"
-                        // onClick={() => navigateToCategory(category)} // Optional: link to explore page with category filter
+                      <Button 
+                        key={category} 
+                        variant="outline" 
+                        size="sm"
+                        className="text-sm border-ucscBlue text-ucscBlue hover:bg-ucscGold/10"
+                        // onClick={() => navigateToExploreWithCategory(category)}
                       >
                         {category}
                       </Button>
