@@ -24,16 +24,16 @@ const ClubProfilePage: React.FC = () => {
   // Mock club data - In a real app, this would be fetched based on the id
   const clubData = {
     id: parseInt(id || "1"),
-    name: "Robotics Club",
-    coverImage: "https://images.unsplash.com/photo-1581091226825-a6a2a5aee158",
-    logo: "https://images.unsplash.com/photo-1518770660439-4636190af475",
+    name: "Society of Hispanic Professional Engineers",
+    coverImage: "https://shpe.engineering.ucsc.edu/files/2024/12/shpe-national.jpeg",
+    logo: "https://shpe.org/wp-content/uploads/2022/06/shpe-logo.png",
     description:
-      "The UCSC Robotics Club is dedicated to designing, building, and programming robots for competitions and exhibitions. We welcome students of all skill levels and backgrounds who are interested in robotics, engineering, and technology.",
+      "Non-profit organization that promotes the advancement of Hispanics in engineering, mathematics, and science.",
     foundedYear: 2015,
     meetingTime: "Wednesdays, 6:30 PM - 8:30 PM",
-    location: "Engineering 2, Room 180",
-    contactEmail: "robotics@ucsc.edu",
-    website: "https://robotics.ucsc.edu",
+    location: "Engineering 2, Room 215",
+    contactEmail: "mlope180@ucsc.edu",
+    website: "https://shpe.engineering.ucsc.edu/",
     memberCount: 45,
     officers: [
       {
