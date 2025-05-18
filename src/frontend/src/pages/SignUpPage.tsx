@@ -1,27 +1,46 @@
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
+import { toast } from "sonner";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Eye, EyeOff } from "lucide-react";
 import Logo from "@/components/shared/Logo";
-import { useToast } from "@/components/ui/use-toast";
+import { getAuth } from "firebase/auth";
+import { doc, setDoc, serverTimestamp } from "firebase/firestore";
+import { db, auth } from "@/lib/firebase";
+import { onAuthStateChanged, User } from "firebase/auth";
+import { useNavigate } from "react-router-dom";
 
-const SignUp = () => {
-  const { toast } = useToast();
-  const [showPassword, setShowPassword] = useState(false);
-  const [formData, setFormData] = useState({
-    name: "",
-    email: "",
-    password: "",
-    displayName: "",
-    notificationPreferences: {
-      newPostEmail: true,
-    },
-  });
+//const auth = getAuth();
+//const user = auth.currentUser; // <-- UID created by Firebase Auth
+//const uid = user?.uid;
+
+  const SignUp = () => {
+    const navigate = useNavigate();
+    const [user, setUser] = useState<User | null>(null);
+    useEffect(() => {
+        const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
+            if (currentUser) {
+                setUser(currentUser);
+            }else{
+                navigate("/login");
+            }
+        });
+        return() => unsubscribe();
+      }, []);
+    //const [showPassword, setShowPassword] = useState(false);
+    const [formData, setFormData] = useState({
+      name: "",
+      email: "",
+      displayName: "",
+      notificationPreferences: {
+        newPostEmail: true,
+      },
+    });
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
@@ -41,26 +60,28 @@ const SignUp = () => {
     });
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit =  async (e: React.FormEvent) => {
     e.preventDefault();
-    
+    if (!user) return;
+    try{
+        const userRef = doc(db, "users", user.uid);
+        await setDoc(userRef, {
+            uid: user.uid,
+            email: user.email,
+            name: formData.name,
+            notificationPreferences: formData.notificationPreferences.newPostEmail,
+            joinedClubs: [],
+            likeContent: [],
+            eventsAttend: [],
+        });
+    toast.success("Account created!");
+    navigate("/dashboard");
     // Here we would normally implement firebase auth registration
     // For the purpose of this demo, just show a toast indicating success
-    toast({
-      title: "Account created!",
-      description: "Your account has been successfully created.",
-    });
-    
-    console.log("Form submission data:", {
-      ...formData,
-      userId: "firebase-generated-uid-would-go-here",
-      joinedClubs: [], // Empty array for new users
-      isOfficerOf: [], // Empty array for new users
-    });
-  };
-
-  const togglePasswordVisibility = () => {
-    setShowPassword(!showPassword);
+    } catch (err) {
+    console.error("Error saving profile:", err);
+    toast.error("Failed to create user profile. Please try again.");
+  }
   };
 
   return (
@@ -112,28 +133,12 @@ const SignUp = () => {
                 onChange={handleInputChange}
               />
             </div>
-            <div className="space-y-2 relative">
-              <Label htmlFor="password">Password</Label>
-              <div className="flex relative">
-                <Input
-                  id="password"
-                  name="password"
-                  type={showPassword ? "text" : "password"}
-                  required
-                  placeholder="Create a password"
-                  value={formData.password}
-                  onChange={handleInputChange}
-                  className="pr-10"
-                />
                 <button
                   type="button"
-                  onClick={togglePasswordVisibility}
                   className="absolute inset-y-0 right-0 flex items-center px-3 text-gray-400 hover:text-gray-600"
                 >
-                  {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
                 </button>
-              </div>
-            </div>
+
             <div className="flex items-center space-x-2 pt-2">
               <Checkbox 
                 id="notificationPreferences"
@@ -144,23 +149,14 @@ const SignUp = () => {
                 htmlFor="notificationPreferences"
                 className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
               >
-                Receive email notifications for new posts
+                Receive notifications for new posts
               </label>
             </div>
-            
-            <Button type="submit" className="w-full bg-slugscene hover:bg-slugscene-light">
+            <Button type="submit" className="w-full bg-ucscBlue hover:bg-ucscBlue/90 text-white font-semibold py-2.5 rounded-md">
               Sign Up
             </Button>
           </form>
         </CardContent>
-        <CardFooter className="flex justify-center">
-          <p className="text-sm text-muted-foreground">
-            Already have an account?{" "}
-            <Link to="/signin" className="text-slugscene hover:underline">
-              Sign In
-            </Link>
-          </p>
-        </CardFooter>
       </Card>
     </div>
   );
