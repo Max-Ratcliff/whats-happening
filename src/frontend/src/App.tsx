@@ -18,6 +18,7 @@ import OfficerPortalCreatePost from "./pages/OfficerPortalCreatePost";
 import OfficerPortalEvents from "./pages/OfficerPortalEvents";
 import OfficerPortalMembers from "./pages/OfficerPortalMembers";
 import NotFound from "./pages/NotFound";
+import SignUpPage from "./pages/SignUpPage";
 
 const queryClient = new QueryClient();
 
@@ -30,6 +31,8 @@ const App = () => (
         <Routes>
           {/* Authentication Routes */}
           <Route path="/" element={<LoginPage />} />
+          <Route path="/SignUpPage" element={<SignUpPage />} />
+
           
           {/* Main Application Routes */}
           <Route path="/dashboard" element={<DashboardPage />} />
