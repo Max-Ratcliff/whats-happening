@@ -81,6 +81,8 @@ const LoginPage: React.FC = () => {
         if (error instanceof FirebaseError) {
             switch (error.code) {
                 case "auth/user-not-found":
+                  navigate("/signup");
+                  break;
                 case "auth/wrong-password":
                 case "auth/invalid-credential":
                     errorMessage = "Invalid email or password.";
