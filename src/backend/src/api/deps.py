@@ -4,7 +4,7 @@ from typing import Optional, Dict, Any
 from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 import firebase_admin.auth
-from google.cloud.firestore_v1.client import Client  # Ensure this is imported
+from google.cloud.firestore_v1.async_client import AsyncClient  # Ensure this is imported
 
 # Using "global" style import as per your preference for project structure
 # This imports 'db' from backend/src/services/firebase_service.py
@@ -65,7 +65,7 @@ async def get_current_user(
         )
 
 
-async def get_firestore_db() -> Client:  # <<< This is the missing function
+async def get_firestore_db() -> AsyncClient:  # <<< This is the missing function
     """
     Dependency to provide the Firestore client.
     Checks if the client was initialized.
