@@ -34,7 +34,7 @@ const Header: React.FC = () => {
         {/* Logo Section */}
         <div className="flex items-center">
           <Link to="/dashboard" className="flex items-center">
-            <Logo className="h-10 w-auto" />
+            <Logo className="h-8 w-auto" />
           </Link>
         </div>
 
