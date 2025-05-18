@@ -5,12 +5,14 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
 import { Search } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 
 /**
  * Explore Clubs page component
  * Allows students to discover and search for clubs
  */
 const ExplorePage: React.FC = () => {
+    const navigate = useNavigate();
   const [searchTerm, setSearchTerm] = useState("");
   const [activeCategory, setActiveCategory] = useState<string | null>(null);
 
@@ -166,7 +168,9 @@ const ExplorePage: React.FC = () => {
                   <span className="text-sm text-gray-500">
                     {club.memberCount} members
                   </span>
-                  <Button className="bg-ucscBlue hover:bg-ucscBlue/90">
+                  <Button type='button' className="bg-ucscBlue hover:bg-ucscBlue/90"
+                    onClick={() => {navigate(`/clubs/${club.id}`)}}
+                    >
                     View Club
                   </Button>
                 </div>
