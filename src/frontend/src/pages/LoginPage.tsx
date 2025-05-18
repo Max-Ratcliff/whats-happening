@@ -26,6 +26,8 @@ import {
   getAdditionalUserInfo, // Import this
 } from "firebase/auth";
 import { FirebaseError } from "firebase/app";
+import { doc, setDoc, getDoc, serverTimestamp } from "firebase/firestore";
+import { db } from "@/lib/firebase"; // Adjust path if needed
 
 type EmailStep = "enterEmail" | "signIn" | "signUp";
 
