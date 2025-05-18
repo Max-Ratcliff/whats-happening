@@ -130,11 +130,11 @@ const ExplorePage: React.FC = () => {
                 </p>
                 </div>
                 <p className="text-gray-600 text-sm mb-4">{club.description}</p>
-                <div className="flex items-center justify-between">
-                  <span className="text-sm text-gray-500">
-                    {club.memberCount} members
-                  </span>
-                  <Button type='button' className="bg-ucscBlue hover:bg-ucscBlue/90"
+                <div className="flex justify-between gap-4 mb-4">
+                  <Button type='button' className="bg-ucscBlue hover:bg-ucscBlue/90 w-full">
+                    Join Club
+                  </Button>
+                  <Button type='button' className="bg-ucscBlue hover:bg-ucscBlue/90 w-full"
                     onClick={() => {navigate(`/clubs/${club.id}`)}}
                     >
                     View Club
