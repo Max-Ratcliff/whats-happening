@@ -1,5 +1,5 @@
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -13,6 +13,19 @@ import {
 } from "@/components/ui/card";
 import { toast } from "sonner";
 import Logo from "@/components/shared/Logo";
+import { auth, app } from "@/lib/firebase"; // Import Firebase auth for authentication
+import {
+  signInWithEmailAndPassword,
+  GoogleAuthProvider,
+  signInWithPopup,
+  signOut,
+  sendPasswordResetEmail,
+  onAuthStateChanged,
+  User, // Type for Firebase User object
+  // createUserWithEmailAndPassword, // Needed for a separate Sign Up page
+} from "firebase/auth";
+import { FirebaseError } from "firebase/app";
+
 
 /**
  * Login page for the application
@@ -23,29 +36,146 @@ const LoginPage: React.FC = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const [isGoogleLoading, setIsGoogleLoading] = useState<boolean>(false);
+
+
+  // Effect to check auth state and redirect if user is already logged in
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, (currentUser: User | null) => {
+      if (currentUser) {
+        // User is signed in
+        if (currentUser.email && currentUser.email.endsWith("@ucsc.edu")) {
+          // If email is valid UCSC, navigate to dashboard
+          toast.info(`Already signed in as ${currentUser.displayName || currentUser.email}`);
+          navigate("/dashboard"); // Or your main app route
+        } else if (currentUser.email) {
+          // If logged in with a non-UCSC email (e.g., from a previous session or error)
+          toast.error("Invalid email domain. Please use @ucsc.edu. Signing out...");
+          signOut(auth); // Force sign out
+        }
+        // If currentUser.email is null (e.g. anonymous user, though not explicitly handled here)
+        // you might want to handle that case or sign them out too.
+      }
+    });
+    // Cleanup subscription on unmount
+    return () => unsubscribe();
+  }, [navigate]);
+
 
   // Handle login submission
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
+    // …email checks…
 
-    // Email validation for UCSC domain
+    try {
+        const userCredential = await signInWithEmailAndPassword(auth, email, password);
+        // …success path…
+    } catch (error: unknown) {
+        console.error("Firebase login error:", error);
+        let errorMessage = "Login failed. Please check your credentials.";
+
+        if (error instanceof FirebaseError) {
+            switch (error.code) {
+                case "auth/user-not-found":
+                case "auth/wrong-password":
+                case "auth/invalid-credential":
+                    errorMessage = "Invalid email or password.";
+                    break;
+                case "auth/invalid-email":
+                    errorMessage = "Please enter a valid email address.";
+                    break;
+                case "auth/too-many-requests":
+                    errorMessage = "Too many login attempts. Please try again later or reset your password.";
+                    break;
+            }
+        }
+        toast.error(errorMessage);
+    } finally {
+        setIsLoading(false);
+    }
+  };
+
+  // Handle Google Sign-In
+  const handleGoogleSignIn = async () => {
+    setIsGoogleLoading(true);
+    const provider = new GoogleAuthProvider();
+    // Optional: You can prompt the user to select an account.
+    // provider.setCustomParameters({ prompt: 'select_account' });
+
+    try {
+      const result = await signInWithPopup(auth, provider);
+      const user = result.user;
+
+      if (user.email && user.email.endsWith("@ucsc.edu")) {
+        toast.success(`Signed in as ${user.displayName || user.email}!`);
+        // await createUserProfileIfNeeded(user); // Optional: Create/update profile in Firestore
+        navigate("/dashboard");
+      } else {
+        toast.error("Please use your UCSC Google account (@ucsc.edu).");
+        await signOut(auth); // Sign out the user from Firebase if email is not valid
+      }
+    } catch (error: unknown) {
+      console.error("Google Sign-In Error:", error);
+      let errorMessage = "Google Sign-In failed.";
+      
+      if (error instanceof FirebaseError) {
+        switch (error.code) {
+          case "auth/popup-closed-by-user":
+            errorMessage = "Google Sign-In cancelled.";
+            break;
+          case "auth/account-exists-with-different-credential":
+            errorMessage = "An account already exists with this email using a different sign-in method.";
+            break;
+          case "auth/popup-blocked":
+            errorMessage = "Google Sign-In popup was blocked by the browser. Please allow popups for this site.";
+            break;
+          case "auth/invalid-credential":
+            errorMessage = "Invalid credentials. Please try again.";
+            break;
+        }
+      }
+      toast.error(errorMessage);
+    } finally {
+      setIsGoogleLoading(false);
+    }
+  };
+
+  // Handle "Forgot Password"
+  const handleForgotPassword = async () => {
+    if (!email) {
+      toast.info("Please enter your email address in the email field to reset your password.");
+      return;
+    }
     if (!email.endsWith("@ucsc.edu")) {
-      toast.error("Please use your UCSC email address (@ucsc.edu)");
-      setIsLoading(false);
+      toast.error("Password reset is only available for @ucsc.edu emails.");
       return;
     }
 
-    // Simulate authentication
+    setIsLoading(true); // Reuse isLoading or create a specific one
     try {
-      // In a real app, this would be an API call
-      await new Promise((resolve) => setTimeout(resolve, 1000));
-      
-      // For demo purposes, allow any valid UCSC email format
-      toast.success("Login successful!");
-      navigate("/dashboard");
-    } catch (error) {
-      toast.error("Login failed. Please check your credentials.");
+      await sendPasswordResetEmail(auth, email);
+      toast.success("Password reset email sent! Check your @ucsc.edu inbox (and spam folder).");
+    } catch (error: unknown) {
+      console.error("Forgot password error:", error);
+      let errorMessage = "Failed to send password reset email.";
+      if (error instanceof FirebaseError) {
+        switch (error.code) {
+          case "auth/user-not-found":
+            errorMessage = "No user found with this UCSC email address.";
+            break;
+          case "auth/invalid-email":
+            errorMessage = "The email address is not valid.";
+            break;
+          case "auth/missing-email":
+            errorMessage = "Please enter your email address.";
+            break;
+          case "auth/too-many-requests":
+            errorMessage = "Too many requests. Please try again later.";
+            break;
+        }
+      }
+      toast.error(errorMessage);
     } finally {
       setIsLoading(false);
     }

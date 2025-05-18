@@ -1,8 +1,9 @@
 // frontend/src/firebase.ts
 import { initializeApp, FirebaseApp } from "firebase/app";
+import { getAnalytics } from "firebase/analytics";
 import { getAuth, Auth } from "firebase/auth";
 import { getFirestore, Firestore } from "firebase/firestore";
-// Import other Firebase services you need, e.g., getStorage
+
 
 // Your web app's Firebase configuration
 // IMPORTANT: Use environment variables for sensitive data like apiKey
@@ -21,7 +22,8 @@ const app: FirebaseApp = initializeApp(firebaseConfig);
 // Get Firebase services
 const auth: Auth = getAuth(app);
 const db: Firestore = getFirestore(app);
+const analytics = getAnalytics(app); // if you use Firebase Analytics
 // const storage = getStorage(app); // if you use Firebase Storage
 
 // Export the services you'll need in other parts of your app
-export { app, auth, db /*, storage */ };
+export { app, auth, db, analytics };
