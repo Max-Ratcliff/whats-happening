@@ -275,7 +275,7 @@ const LoginPage: React.FC = () => {
               Don't have an account?{" "}
               <button
                 type="button"
-                onClick={() => navigate("/signup")} // Navigate to your signup route
+                onClick={() => navigate("/SignUpPage")} // Navigate to your signup route
                 className="font-medium text-ucscBlue hover:underline"
                 disabled={isLoading || isGoogleLoading}
               >
