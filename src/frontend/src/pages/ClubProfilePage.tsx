@@ -129,7 +129,6 @@ const ClubProfilePage: React.FC = () => {
                   : "bg-ucscBlue hover:bg-ucscBlue/90"
               }
               variant={isMember ? "outline" : "default"}
-              onClick={handleMembershipToggle}
             >
               {isMember ? "Leave Club" : "Join Club"}
             </Button>
