@@ -1,5 +1,5 @@
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useParams } from "react-router-dom";
 import PageLayout from "@/components/layout/PageLayout";
 import { Button } from "@/components/ui/button";
@@ -10,120 +10,95 @@ import {
   TabsList,
   TabsTrigger,
 } from "@/components/ui/tabs";
-import { toast } from "sonner";
 import { Heart } from "lucide-react";
+import { useNavigate } from "react-router-dom";
+import { collection, getDocs, DocumentData } from "firebase/firestore";
+import { db, auth } from "@/lib/firebase"; // Import auth
+import { Club } from "@/types";
+import { toast } from "sonner"; // For notifications
 
 /**
  * Club Profile page component
  * Shows detailed information about a specific club
  */
 const ClubProfilePage: React.FC = () => {
-  const { id } = useParams<{ id: string }>();
+  const navigate = useNavigate();
+  const { clubId } = useParams<{ clubId: string }>(); // add type here for safety
+  console.log("clubId from URL:", clubId); // ✅ Safe location
+  const [activeCategory, setActiveCategory] = useState<string | null>("All");
+  const [clubs, setClubs] = useState<Club[]>([]);
+  const [isLoading, setIsLoading] = useState<boolean>(true);
+  const [error, setError] = useState<string | null>(null);
+  const [joiningClubId, setJoiningClubId] = useState<string | null>(null);
   const [isMember, setIsMember] = useState(true);
 
+    useEffect(() => {
+      const fetchClubs = async () => {
+        setIsLoading(true);
+        setError(null);
+        try {
+          const clubsRef = collection(db, "clubs");
+          const snapshot = await getDocs(clubsRef);
+          const clubData: Club[] = snapshot.docs.map((doc): Club => {
+            const data = doc.data() as DocumentData;
+            return {
+              clubId: doc.id,
+              name: data.name || "Unnamed Club",
+              description: data.description || "No description available.",
+              category: Array.isArray(data.category) ? data.category : [],
+              contactEmail: Array.isArray(data.contactEmail) ? data.contactEmail : [],
+              logoURL: data.logoURL || undefined,
+              memberCount: typeof data.memberCount === 'number' ? data.memberCount : 0,
+              clubBanner: data.clubBanner || undefined,
+              instagram: data.instagram || " ",
+              clubMeetingTime: data.clubMeetingTime || "No meeting times available.",
+              website: data.website || "No website available",
+              location: data.location || "Location varies",
+            };
+          });
+          console.log("Fetched clubs from Firestore:", clubData);
+          setClubs(clubData);
+        } catch (err) {
+          console.error("Error fetching clubs from Firestore:", err);
+          setError(err instanceof Error ? err.message : "Failed to fetch clubs.");
+        } finally {
+          setIsLoading(false);
+        }
+      };
+      fetchClubs();
+    }, []);
+
   // Mock club data - In a real app, this would be fetched based on the id
-  const clubData = {
-    id: parseInt(id || "1"),
-    name: "Robotics Club",
-    coverImage: "https://images.unsplash.com/photo-1581091226825-a6a2a5aee158",
-    logo: "https://images.unsplash.com/photo-1518770660439-4636190af475",
-    description:
-      "The UCSC Robotics Club is dedicated to designing, building, and programming robots for competitions and exhibitions. We welcome students of all skill levels and backgrounds who are interested in robotics, engineering, and technology.",
-    foundedYear: 2015,
-    meetingTime: "Wednesdays, 6:30 PM - 8:30 PM",
-    location: "Engineering 2, Room 180",
-    contactEmail: "robotics@ucsc.edu",
-    website: "https://robotics.ucsc.edu",
-    memberCount: 45,
-    officers: [
-      {
-        name: "Alex Rodriguez",
-        role: "President",
-        avatar: "https://images.unsplash.com/photo-1506794778202-cad84cf45f1d",
-      },
-      {
-        name: "Jamie Chen",
-        role: "Vice President",
-        avatar: "https://images.unsplash.com/photo-1534528741775-53994a69daeb",
-      },
-      {
-        name: "Taylor Kim",
-        role: "Treasurer",
-        avatar: "https://images.unsplash.com/photo-1522075469751-3a6694fb2f61",
-      },
-    ],
-    posts: [
-      {
-        id: 1,
-        authorName: "Alex Rodriguez",
-        authorRole: "President",
-        timestamp: "Today at 2:45 PM",
-        content:
-          "Our robot design won first place at the UC robotics competition! Thanks to all members who contributed to the project.",
-        image: "https://images.unsplash.com/photo-1555680202-c86f0e12f086",
-        likes: 24,
-        comments: 8,
-      },
-      {
-        id: 2,
-        authorName: "Jamie Chen",
-        authorRole: "Vice President",
-        timestamp: "May 10, 2025",
-        content:
-          "Workshop announcement! This Wednesday we'll be covering basics of Arduino programming. Bring your laptops and be ready to code!",
-        likes: 15,
-        comments: 3,
-      },
-    ],
-    events: [
-      {
-        id: 1,
-        title: "Arduino Workshop",
-        date: "May 20, 2025",
-        time: "6:30 PM - 8:30 PM",
-        location: "Engineering 2, Room 180",
-        description:
-          "Learn the basics of Arduino programming and how to control simple components.",
-      },
-      {
-        id: 2,
-        title: "Robot Design Challenge",
-        date: "June 5, 2025",
-        time: "1:00 PM - 5:00 PM",
-        location: "Engineering 2, Lab 192",
-        description:
-          "Team-based competition to design and build a robot that can navigate an obstacle course.",
-      },
-      {
-        id: 3,
-        title: "End of Year Showcase",
-        date: "June 15, 2025",
-        time: "4:00 PM - 7:00 PM",
-        location: "Engineering 2 Courtyard",
-        description:
-          "Showcase of all the projects our members have worked on throughout the year.",
-      },
-    ],
-  };
 
   // Handle joining/leaving a club
   const handleMembershipToggle = () => {
     if (isMember) {
       // Leave club logic
-      toast.success(`You have left ${clubData.name}`);
+      toast.success(`You have left ${club.name}`);
     } else {
       // Join club logic
-      toast.success(`You have joined ${clubData.name}!`);
+      toast.success(`You have joined ${club.name}!`);
     }
     setIsMember(!isMember);
   };
+
+  const club = clubs.find((c) => c.clubId === clubId);
+  if (isLoading || !club) {
+    return (
+      <PageLayout>
+        <div className="app-container py-6 text-center">
+          <p className="text-lg text-gray-600">Loading club information...</p>
+        </div>
+      </PageLayout>
+    );
+  }
 
   return (
     <PageLayout>
       {/* Club Cover and Basic Info */}
       <div
         className="h-48 md:h-64 bg-cover bg-center"
-        style={{ backgroundImage: `url(${clubData.coverImage})` }}
+        style={{ backgroundImage: `url(${club.clubBanner})` }}
       >
         <div className="h-full w-full bg-black bg-opacity-30"></div>
       </div>
@@ -134,18 +109,15 @@ const ClubProfilePage: React.FC = () => {
           {/* Club Logo */}
           <div className="absolute -top-16 left-4 h-32 w-32 rounded-xl overflow-hidden border-4 border-white shadow-md">
             <img
-              src={clubData.logo}
-              alt={clubData.name}
+              src={club.logoURL}
+              alt={`${club.name} logo`}
               className="h-full w-full object-cover"
             />
           </div>
 
           {/* Club Title and Membership Button */}
           <div className="ml-40 md:ml-36 flex-grow">
-            <h1 className="text-2xl font-bold">{clubData.name}</h1>
-            <p className="text-sm text-gray-500">
-              {clubData.memberCount} members • Founded {clubData.foundedYear}
-            </p>
+            <h1 className="text-2xl font-bold">{club.name}</h1>
           </div>
 
           <div className="mt-4 md:mt-0">
@@ -179,32 +151,32 @@ const ClubProfilePage: React.FC = () => {
                 <Card>
                   <CardContent className="pt-6">
                     <h2 className="text-xl font-semibold mb-4">About Us</h2>
-                    <p className="text-gray-700 mb-6">{clubData.description}</p>
+                    <p className="text-gray-700 mb-6">{club.description}</p>
                     
                     <h3 className="font-semibold mb-2">Meeting Information</h3>
                     <div className="space-y-1 mb-4">
                       <p className="text-sm">
-                        <span className="font-medium">Time:</span> {clubData.meetingTime}
+                        <span className="font-medium">Time:</span> {club.clubMeetingTime}
                       </p>
                       <p className="text-sm">
-                        <span className="font-medium">Location:</span> {clubData.location}
+                        <span className="font-medium">Location:</span> {club.location}
                       </p>
                     </div>
                     
                     <h3 className="font-semibold mb-2">Contact Information</h3>
                     <div className="space-y-1">
                       <p className="text-sm">
-                        <span className="font-medium">Email:</span> {clubData.contactEmail}
+                        <span className="font-medium">Email:</span> {club.contactEmail}
                       </p>
                       <p className="text-sm">
                         <span className="font-medium">Website:</span>{" "}
                         <a
-                          href={clubData.website}
+                          href={club.website}
                           className="text-ucscBlue hover:underline"
                           target="_blank"
                           rel="noopener noreferrer"
                         >
-                          {clubData.website}
+                          {club.website}
                         </a>
                       </p>
                     </div>
@@ -214,36 +186,32 @@ const ClubProfilePage: React.FC = () => {
 
               <div>
                 <Card>
-                  <CardContent className="pt-6">
-                    <h2 className="text-xl font-semibold mb-4">Upcoming Event</h2>
-                    {clubData.events[0] && (
-                      <div>
-                        <h3 className="font-semibold">{clubData.events[0].title}</h3>
-                        <p className="text-sm text-gray-500 mb-2">
-                          {clubData.events[0].date} • {clubData.events[0].time}
-                        </p>
-                        <p className="text-sm mb-2">{clubData.events[0].location}</p>
-                        <p className="text-sm text-gray-600">
-                          {clubData.events[0].description}
-                        </p>
-                        <Button
-                          className="mt-4 w-full bg-ucscBlue hover:bg-ucscBlue/90"
-                          size="sm"
-                        >
-                          RSVP
-                        </Button>
-                      </div>
-                    )}
-                  </CardContent>
+                <CardContent className="pt-6">
+                <h2 className="text-xl font-semibold mb-4">Upcoming Event</h2>
+                <div>
+                  <h3 className="font-semibold">GBM Meeting</h3>
+                  <p className="text-sm text-gray-500 mb-2">May 20, 2025 • 6:30 PM - 8:30 PM</p>
+                  <p className="text-sm mb-2">Engineering 2, Room 215</p>
+                  <p className="text-sm text-gray-600">
+                    Attend our General Body Meeting to learn more and meet other club members!
+                  </p>
+                  <Button
+                    className="mt-4 w-full bg-ucscBlue hover:bg-ucscBlue/90"
+                    size="sm"
+                  >
+                    RSVP
+                  </Button>
+                </div>
+              </CardContent>
                 </Card>
               </div>
             </div>
           </TabsContent>
-
-          {/* Posts Tab */}
+{/*
+           Posts tab 
           <TabsContent value="posts" className="py-4">
             <div className="space-y-6">
-              {clubData.posts.map((post) => (
+              {club.posts.map((post) => (
                 <Card key={post.id} className="slugscene-card">
                   <CardContent className="pt-6">
                     <div className="flex items-start space-x-4">
@@ -285,7 +253,7 @@ const ClubProfilePage: React.FC = () => {
             </div>
           </TabsContent>
 
-          {/* Events Tab */}
+          events tab 
           <TabsContent value="events" className="py-4">
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {clubData.events.map((event) => (
@@ -310,7 +278,7 @@ const ClubProfilePage: React.FC = () => {
             </div>
           </TabsContent>
 
-          {/* Officers Tab */}
+           Officers Tab 
           <TabsContent value="officers" className="py-4">
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
               {clubData.officers.map((officer, index) => (
@@ -330,6 +298,8 @@ const ClubProfilePage: React.FC = () => {
               ))}
             </div>
           </TabsContent>
+  */}
+
         </Tabs>
       </div>
     </PageLayout>

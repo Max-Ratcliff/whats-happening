@@ -7,5 +7,10 @@ export interface Club {
     contactEmail: string[];
     logoURL?: string;
     memberCount?: number;
+    clubBanner?: string;
+    instagram?: string;
+    clubMeetingTime?: string;
+    location?: string;
+    website?: string;
 };
 

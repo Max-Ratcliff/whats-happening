@@ -38,9 +38,9 @@ const App = () => (
           <Route path="/dashboard" element={<DashboardPage />} />
           <Route path="/explore" element={<ExplorePage />} />
           <Route path="/my-clubs" element={<MyClubsPage />} />
-          <Route path="/clubs/:id" element={<ClubProfilePage />} />
           <Route path="/calendar" element={<CalendarPage />} />
-          
+          <Route path="/clubs/:clubId" element={<ClubProfilePage />} />
+
           {/* Officer Portal Routes */}
           <Route path="/officer/:clubId" element={<OfficerPortalPage />}>
             <Route path="profile" element={<OfficerPortalProfile />} />
