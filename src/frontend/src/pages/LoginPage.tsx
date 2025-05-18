@@ -37,7 +37,6 @@ const LoginPage: React.FC = () => {
   const [password, setPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [isGoogleLoading, setIsGoogleLoading] = useState<boolean>(false);
-  const [authCheckLoading, setAuthCheckLoading] = useState<boolean>(true);
 
 
 
@@ -58,7 +57,6 @@ const LoginPage: React.FC = () => {
         // If currentUser.email is null (e.g. anonymous user, though not explicitly handled here)
         // you might want to handle that case or sign them out too.
       }
-      setAuthCheckLoading(false);
     });
     // Cleanup subscription on unmount
     return () => unsubscribe();
@@ -81,8 +79,6 @@ const LoginPage: React.FC = () => {
         if (error instanceof FirebaseError) {
             switch (error.code) {
                 case "auth/user-not-found":
-                  navigate("/signup");
-                  break;
                 case "auth/wrong-password":
                 case "auth/invalid-credential":
                     errorMessage = "Invalid email or password.";
@@ -185,15 +181,6 @@ const LoginPage: React.FC = () => {
       setIsLoading(false);
     }
   };
-
-  // Render a loading indicator while checking auth state
-  if (authCheckLoading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-b from-ucscBlue to-blue-900 p-4">
-        <p className="text-white text-xl">Loading authentication...</p> {/* Or a spinner component */}
-      </div>
-    );
-  }
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-b from-ucscBlue to-blue-900 p-4">
