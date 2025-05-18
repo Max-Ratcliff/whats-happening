@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import LikeButton from "@/components/ui/likebutton";
 import { format } from "date-fns"; // Import date-fns for formatting
 import PageLayout from "@/components/layout/PageLayout";
 import { Button } from "@/components/ui/button";
@@ -209,10 +210,7 @@ const DashboardPage: React.FC = () => {
                         </div>
                       )}
                       <div className="flex items-center space-x-6 pt-2 text-sm">
-                        <button className="flex items-center text-gray-600 hover:text-ucscBlue transition-colors">
-                          <Heart className="h-4 w-4 mr-1.5" />
-                          <span>{post.likesCount} Likes</span>
-                        </button>
+			<LikeButton initialCount={post.likesCount} />
                         <button className="text-gray-600 hover:text-ucscBlue transition-colors">
                           {post.commentsCount} Comments
                         </button>
