@@ -9,8 +9,8 @@ import { Button } from '@/components/ui/button';
 import {
     Card,
     CardContent,
-    // CardHeader, // Will be removed for the new style
-    // CardTitle, // Will be used as <h3> inside CardContent
+    CardHeader, // Will be removed for the new style
+    CardTitle, // Will be used as <h3> inside CardContent
     CardDescription, // Can be used if needed, but ExplorePage uses <p>
     CardFooter
 } from '@/components/ui/card';
