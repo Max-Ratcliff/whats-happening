@@ -15,7 +15,7 @@ const Logo: React.FC<LogoProps> = ({ className = "h-16 w-auto" }) => {
       <img
           src="/Slug_Scene_Logo.png"
           alt="SlugScene Logo"
-          className="h-16 w-auto object-contain mt-4"
+          className="h-16 w-auto object-contain mt-2"
         />
       </div>
   );
