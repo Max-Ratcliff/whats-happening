@@ -1,9 +1,9 @@
 from dataclasses import dataclass, field
-from typing import List, Dict, Optional 
-from .club_officer import ClubOfficer
+from typing import List, Dict, Optional
+
 
 @dataclass
-class Club;
+class Club:
     clubId: str
     name: str
     description: str
@@ -11,6 +11,6 @@ class Club;
     logoUrl: str
     coverImageUrl: Optional[str] = None
     contactEmail: str = ""
-    officers: List[ClubOfficer] = field(default_factory=list)
+    officers: List[str] = field(default_factory=list)
     memberCount: int = 0
     socialMediaLinks: Dict[str, str] = field(default_factory=dict)
