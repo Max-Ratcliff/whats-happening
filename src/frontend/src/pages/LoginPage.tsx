@@ -183,21 +183,21 @@ const LoginPage: React.FC = () => {
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-b from-ucscBlue to-blue-900 p-4">
-      <Card className="w-full max-w-md">
-        <CardHeader className="space-y-4 flex flex-col items-center">
-          <Logo className="h-16 w-auto" />
+      <Card className="w-full max-w-md bg-white shadow-xl rounded-lg">
+        <CardHeader className="space-y-4 flex flex-col items-center pt-8 pb-4">
+          <Logo className="h-16 w-auto" /> {/* Ensure Logo component is imported and working */}
           <div className="text-center">
-            <CardTitle className="text-2xl">Welcome to SlugScene</CardTitle>
-            <CardDescription>
-              Sign in with your UCSC credentials to continue
+            <CardTitle className="text-3xl font-bold text-gray-800">Welcome to SlugScene</CardTitle>
+            <CardDescription className="text-gray-600">
+              Sign in with your UCSC credentials
             </CardDescription>
           </div>
         </CardHeader>
 
         <form onSubmit={handleLogin}>
-          <CardContent className="space-y-4">
+          <CardContent className="space-y-6 px-8 py-6">
             <div className="space-y-2">
-              <label htmlFor="email" className="text-sm font-medium">
+              <label htmlFor="email" className="text-sm font-medium text-gray-700">
                 Email (@ucsc.edu)
               </label>
               <Input
@@ -207,47 +207,80 @@ const LoginPage: React.FC = () => {
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 required
-                className="w-full"
+                className="w-full rounded-md border-gray-300 focus:border-ucscBlue focus:ring-ucscBlue"
+                disabled={isLoading || isGoogleLoading}
               />
             </div>
 
             <div className="space-y-2">
               <div className="flex justify-between items-center">
-                <label htmlFor="password" className="text-sm font-medium">
+                <label htmlFor="password" className="text-sm font-medium text-gray-700">
                   Password
                 </label>
-                <a
-                  href="#forgot-password"
-                  className="text-xs text-ucscBlue hover:underline"
+                <button
+                  type="button" // Important: type="button" to prevent form submission
+                  onClick={handleForgotPassword}
+                  className="text-xs text-ucscBlue hover:underline disabled:opacity-50 disabled:cursor-not-allowed"
+                  disabled={isLoading || isGoogleLoading || !email.endsWith('@ucsc.edu')}
                 >
                   Forgot Password?
-                </a>
+                </button>
               </div>
               <Input
                 id="password"
                 type="password"
+                placeholder="••••••••"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 required
-                className="w-full"
+                className="w-full rounded-md border-gray-300 focus:border-ucscBlue focus:ring-ucscBlue"
+                disabled={isLoading || isGoogleLoading}
               />
             </div>
           </CardContent>
 
-          <CardFooter className="flex flex-col space-y-4">
+          <CardFooter className="flex flex-col space-y-4 px-8 pb-8 pt-4">
             <Button
               type="submit"
-              className="w-full bg-ucscBlue hover:bg-ucscBlue/90"
-              disabled={isLoading}
+              className="w-full bg-ucscBlue hover:bg-ucscBlue/90 text-white font-semibold py-2.5 rounded-md transition-colors duration-150"
+              disabled={isLoading || isGoogleLoading}
             >
-              {isLoading ? "Signing in..." : "Sign In"}
+              {isLoading ? "Signing In..." : "Sign In"}
             </Button>
 
-            <div className="text-center text-sm">
+            <div className="relative w-full flex items-center py-2">
+              <div className="flex-grow border-t border-gray-300"></div>
+              <span className="flex-shrink mx-4 text-gray-500 text-xs uppercase">Or</span>
+              <div className="flex-grow border-t border-gray-300"></div>
+            </div>
+
+            <Button
+              type="button"
+              variant="outline" // Assuming your Button component supports variants
+              className="w-full border-gray-300 text-gray-700 hover:bg-gray-50 font-medium py-2.5 rounded-md transition-colors duration-150 flex items-center justify-center"
+              onClick={handleGoogleSignIn}
+              disabled={isLoading || isGoogleLoading}
+            >
+              {isGoogleLoading ? (
+                "Signing In..."
+              ) : (
+                <>
+                  <svg className="mr-2 h-5 w-5" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg"><path d="M21.821 9.927H12.182V13.936H18.045C17.418 16.318 15.218 18 12.182 18C8.782 18 6 15.218 6 11.818C6 8.418 8.782 5.636 12.182 5.636C13.709 5.636 15.082 6.164 16.136 7.091L19.091 4.136C17.182 2.364 14.818 1.273 12.182 1.273C6.764 1.273 2.5 6.055 2.5 11.818C2.5 17.582 6.764 22.364 12.182 22.364C17.655 22.364 22 17.909 22 12C22 11.218 21.936 10.527 21.821 9.927Z"/></svg>
+                  Sign in with Google
+                </>
+              )}
+            </Button>
+
+            <div className="text-center text-sm text-gray-600 pt-2">
               Don't have an account?{" "}
-              <a href="#sign-up" className="text-ucscBlue hover:underline">
+              <button
+                type="button"
+                onClick={() => navigate("/signup")} // Navigate to your signup route
+                className="font-medium text-ucscBlue hover:underline"
+                disabled={isLoading || isGoogleLoading}
+              >
                 Sign Up
-              </a>
+              </button>
             </div>
           </CardFooter>
         </form>
