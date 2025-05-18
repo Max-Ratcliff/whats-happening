@@ -71,7 +71,7 @@ const ClubProfilePage: React.FC = () => {
   // Mock club data - In a real app, this would be fetched based on the id
 
   // Handle joining/leaving a club
-  const handleMembershipToggle = () => {
+ /* const handleMembershipToggle = () => {
     if (isMember) {
       // Leave club logic
       toast.success(`You have left ${club.name}`);
@@ -81,6 +81,7 @@ const ClubProfilePage: React.FC = () => {
     }
     setIsMember(!isMember);
   };
+  */
 
   const club = clubs.find((c) => c.clubId === clubId);
   if (isLoading || !club) {
