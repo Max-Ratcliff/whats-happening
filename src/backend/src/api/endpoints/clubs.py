@@ -72,7 +72,7 @@ async def join_club_endpoint(
         print("DEBUG: JOIN_CLUB - Attempting to start 'async with db.transaction()'...")
         async with db.transaction() as transaction_obj:
             # print(f"DEBUG: Inside 'async with' block for JOIN. Transaction object type: {type(transaction_obj)}")
-            callback_result = await _join_club_transaction_callback(
+            await _join_club_transaction_callback(
                 transaction_obj,
                 user_doc_ref,
                 club_doc_ref,
@@ -161,7 +161,7 @@ async def leave_club_endpoint(
         print(f"DEBUG: LEAVE_CLUB - Attempting to start 'async with db.transaction()' for club {club_id}...")
         async with db.transaction() as transaction_obj:
             # print(f"DEBUG: Inside 'async with' block for LEAVE. Transaction object type: {type(transaction_obj)}")
-            callback_result = await _leave_club_transaction_callback(
+            await _leave_club_transaction_callback(
                 transaction_obj,
                 user_doc_ref,
                 club_doc_ref,  # Pass even if it might not exist; transaction.update is somewhat idempotent
