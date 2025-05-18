@@ -1,20 +1,35 @@
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import PageLayout from "@/components/layout/PageLayout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
 import { Search } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import { collection, getDocs } from "firebase/firestore";
+import { db } from "@/lib/firebase";
 
 /**
  * Explore Clubs page component
  * Allows students to discover and search for clubs
  */
+
+type Club = {
+  id: string;
+  name: string;
+  description: string;
+  category: string[];
+  contactEmail: string[];
+  logoURL: string;
+  memberCount: number; 
+};
+
 const ExplorePage: React.FC = () => {
     const navigate = useNavigate();
   const [searchTerm, setSearchTerm] = useState("");
   const [activeCategory, setActiveCategory] = useState<string | null>(null);
+  const [clubs, setClubs] = useState<Club[]>([]);
+
 
   // Mock data for club categories
   const categories = [
@@ -29,85 +44,34 @@ const ExplorePage: React.FC = () => {
   ];
 
   // Mock data for clubs
-  const clubs = [
-    {
-      id: 1,
-      name: "Robotics Club",
-      category: "Tech",
-      logo: "https://images.unsplash.com/photo-1518770660439-4636190af475",
-      description: "Building robots and competing in national competitions.",
-      memberCount: 45,
-    },
-    {
-      id: 2,
-      name: "Photography Club",
-      category: "Arts",
-      logo: "https://images.unsplash.com/photo-1493967798781-59dc9f3c3b84",
-      description: "Capturing the beauty of our campus and beyond.",
-      memberCount: 32,
-    },
-    {
-      id: 3,
-      name: "Computer Science Society",
-      category: "Academic",
-      logo: "https://images.unsplash.com/photo-1461749280684-dccba630e2f6",
-      description: "Advancing CS knowledge and building community.",
-      memberCount: 78,
-    },
-    {
-      id: 4,
-      name: "Slug Soccer",
-      category: "Sports",
-      logo: "https://images.unsplash.com/photo-1579952363873-27f3bade9f55",
-      description: "Competitive and recreational soccer for all levels.",
-      memberCount: 54,
-    },
-    {
-      id: 5,
-      name: "Environmental Action",
-      category: "Social",
-      logo: "https://images.unsplash.com/photo-1500673922987-e212871fec22",
-      description: "Promoting sustainability on campus and beyond.",
-      memberCount: 41,
-    },
-    {
-      id: 6,
-      name: "Filipino Student Association",
-      category: "Cultural",
-      logo: "https://images.unsplash.com/photo-1551801691-f0bce83d4f28",
-      description: "Celebrating Filipino culture and building community.",
-      memberCount: 37,
-    },
-    {
-      id: 7,
-      name: "Business Association",
-      category: "Professional",
-      logo: "https://images.unsplash.com/photo-1580519542036-c47de6196ba5",
-      description: "Connecting students with business opportunities.",
-      memberCount: 62,
-    },
-    {
-      id: 8,
-      name: "Music Club",
-      category: "Arts",
-      logo: "https://images.unsplash.com/photo-1511379938547-c1f69419868d",
-      description: "Making music and organizing campus performances.",
-      memberCount: 29,
-    },
-  ];
+    useEffect(() => {
+      const fetchClubs = async () => {
+        const clubsRef = collection(db, "clubs"); //referencing clubs collection
+        const snapshot = await getDocs(clubsRef);
+        const clubData: Club[] = snapshot.docs.map((doc) => ({ 
+          id: doc.id, 
+          ...doc.data(),
+        })) as Club[];
+        console.log("Fetched clubs from Firestore:", clubData);
+        setClubs(clubData);
+      };
+      fetchClubs();
+    }, []);
+      
 
   // Filter clubs based on search and category
   const filteredClubs = clubs.filter((club) => {
-    const matchesSearch = club.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
-                          club.description.toLowerCase().includes(searchTerm.toLowerCase());
-    
-    const matchesCategory = activeCategory === null || 
-                            activeCategory === "All" || 
-                            club.category === activeCategory;
-    
+    const matchesSearch =
+      club.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      club.description.toLowerCase().includes(searchTerm.toLowerCase());
+  
+    const matchesCategory =
+      activeCategory === null ||
+      activeCategory === "All" ||
+      club.category.includes(activeCategory);
+  
     return matchesSearch && matchesCategory;
   });
-
   return (
     <PageLayout>
       <div className="app-container py-6">
@@ -151,7 +115,7 @@ const ExplorePage: React.FC = () => {
             <Card key={club.id} className="slugscene-card overflow-hidden">
               <div className="h-40 bg-gray-100">
                 <img
-                  src={club.logo}
+                  src={club.logoURL}
                   alt={club.name}
                   className="w-full h-full object-cover"
                 />
@@ -160,8 +124,10 @@ const ExplorePage: React.FC = () => {
                 <div className="flex items-center justify-between mb-2">
                   <h3 className="font-bold text-lg">{club.name}</h3>
                   <span className="text-xs bg-ucscLightBlue text-ucscBlue rounded-full px-2 py-1">
-                    {club.category}
+                    {Array.isArray(club.category) ? club.category.join(", ") : "Uncategorized"}
                   </span>
+                <p className="text-sm text-gray-500">
+                </p>
                 </div>
                 <p className="text-gray-600 text-sm mb-4">{club.description}</p>
                 <div className="flex items-center justify-between">
