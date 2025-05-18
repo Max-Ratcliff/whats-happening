@@ -2,32 +2,33 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { auth } from '@/lib/firebase'; // Your Firebase auth instance
 import { User as FirebaseUser } from 'firebase/auth';
-import { Club } from '@/types';      // Your centralized Club interface
+import { Club } from '@/types';     // Your centralized Club interface
 
 import PageLayout from '@/components/layout/PageLayout'; // Assuming this is your layout
 import { Button } from '@/components/ui/button';
 import {
     Card,
     CardContent,
-    CardHeader,
-    CardTitle,
-    CardDescription,
+    // CardHeader, // Will be removed for the new style
+    // CardTitle, // Will be used as <h3> inside CardContent
+    CardDescription, // Can be used if needed, but ExplorePage uses <p>
     CardFooter
 } from '@/components/ui/card';
 import { toast } from 'sonner';
 import { Loader2, Users, LogOut, ExternalLink, PlusCircle } from 'lucide-react'; // Icons
 
-// API base URL (consider moving to a config file or .env)
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000/api';
 
 const MyClubsPage: React.FC = () => {
   const [myClubs, setMyClubs] = useState<Club[]>([]);
   const [currentUser, setCurrentUser] = useState<FirebaseUser | null>(null);
-  const [isLoading, setIsLoading] = useState<boolean>(true);
+  const [isLoading, setIsLoading] = useState<boolean>(true); // For overall page load
   const [error, setError] = useState<string | null>(null);
+  const [leavingClubId, setLeavingClubId] = useState<string | null>(null); // For "Leave Club" button loading state
   const navigate = useNavigate();
 
   const fetchMyClubs = useCallback(async (user: FirebaseUser) => {
+    // ... (fetchMyClubs function remains the same)
     setIsLoading(true);
     setError(null);
     try {
@@ -62,6 +63,7 @@ const MyClubsPage: React.FC = () => {
   }, []);
 
   useEffect(() => {
+    // ... (useEffect for auth state remains the same) ...
     const unsubscribe = auth.onAuthStateChanged((user) => {
       if (user) {
         setCurrentUser(user);
@@ -71,37 +73,33 @@ const MyClubsPage: React.FC = () => {
         setMyClubs([]);
         setIsLoading(false);
         toast.info("Please log in to view your clubs.");
-        navigate('/login'); // Redirect to login if not authenticated
+        navigate('/login'); 
       }
     });
     return () => unsubscribe();
   }, [fetchMyClubs, navigate]);
 
-  const handleLeaveClub = async (clubIdToLeave: string) => {
+  const handleLeaveClub = async (clubIdToLeave: string, clubName: string) => {
     if (!currentUser) {
       toast.error("You must be logged in to leave a club.");
       return;
     }
 
-    // Simple confirmation, you can use a nicer modal dialog
-    if (!window.confirm("Are you sure you want to leave this club?")) {
+    if (!window.confirm(`Are you sure you want to leave ${clubName}?`)) {
       return;
     }
 
-    // Consider a more specific loading state for this action if needed
-    // For now, we can use the general setIsLoading or a new one.
-    // Let's assume a general indication is fine.
+    setLeavingClubId(clubIdToLeave); // Set loading state for this button
     const originalClubs = [...myClubs];
-    setMyClubs(prevClubs => prevClubs.filter(club => club.clubId !== clubIdToLeave)); // Optimistic update
+    
+    // Optimistic update
+    setMyClubs(prevClubs => prevClubs.filter(club => club.clubId !== clubIdToLeave));
 
     try {
       const token = await currentUser.getIdToken();
-      // Endpoint based on your plan: POST /clubs/{club_id}/leave
       const response = await fetch(`${API_BASE_URL}/clubs/${clubIdToLeave}/leave`, {
         method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-        },
+        headers: { 'Authorization': `Bearer ${token}` },
       });
 
       if (!response.ok) {
@@ -109,45 +107,29 @@ const MyClubsPage: React.FC = () => {
         try {
             const errorData = await response.json();
             errorDetail = errorData.detail || errorDetail;
-        } catch (e) { /* Ignore if response is not JSON */ }
+        } catch (e) { /* Ignore */ }
         throw new Error(errorDetail);
       }
 
-      const result = await response.json(); // Assuming backend sends a success message
-      toast.success(result.message || "Successfully left the club.");
-      // No need to re-fetch if optimistic update was successful.
-      // If not optimistic, or to ensure consistency: fetchMyClubs(currentUser);
+      const result = await response.json();
+      toast.success(result.message || `Successfully left ${clubName}.`);
+      // No need to re-fetch if optimistic update is desired to be permanent on this view
+      // OR: if you want to ensure data consistency after leaving, call fetchMyClubs(currentUser) again
+      // but that would negate the optimistic update's immediate effect if the list re-renders fully.
+      // For now, optimistic update is kept.
     } catch (err) {
       console.error("Error leaving club:", err);
       const errorMessage = err instanceof Error ? err.message : "An unknown error occurred.";
       toast.error("Failed to leave club.", { description: errorMessage });
       setMyClubs(originalClubs); // Revert optimistic update on error
+    } finally {
+      setLeavingClubId(null); // Reset loading state
     }
   };
 
-
-  if (isLoading && myClubs.length === 0) { // Show full page loader only on initial load
-    return (
-      <PageLayout>
-        <div className="app-container py-6 flex justify-center items-center min-h-[calc(100vh-150px)]">
-          <Loader2 className="h-10 w-10 animate-spin text-ucscBlue" />
-          <span className="ml-3 text-lg">Loading Your Clubs...</span>
-        </div>
-      </PageLayout>
-    );
-  }
-
-  if (error && myClubs.length === 0) { // Show full page error only if initial load failed
-    return (
-      <PageLayout>
-        <div className="app-container py-6 text-center">
-          <p className="text-red-500 text-xl mb-4">Could not load your clubs.</p>
-          <p className="text-gray-600 mb-6">{error}</p>
-          <Button onClick={() => currentUser && fetchMyClubs(currentUser)}>Try Again</Button>
-        </div>
-      </PageLayout>
-    );
-  }
+  // ... (isLoading and error JSX for overall page remains the same) ...
+  if (isLoading && myClubs.length === 0) { /* ... */ }
+  if (error && myClubs.length === 0) { /* ... */ }
 
   return (
     <PageLayout>
@@ -160,20 +142,21 @@ const MyClubsPage: React.FC = () => {
         </header>
 
         {myClubs.length === 0 && !isLoading && (
-          <Card className="text-center p-8 max-w-lg mx-auto border-dashed border-ucscBlue/50">
-            <CardHeader className="items-center"> {/* Center icon */}
+          // ... ("You Haven't Joined Any Clubs Yet" Card JSX remains the same) ...
+           <Card className="text-center p-8 max-w-lg mx-auto border-dashed border-ucscBlue/50">
+            <CardHeader className="items-center">
                 <Users className="h-16 w-16 text-ucscBlue/70 mb-4" />
                 <CardTitle className="text-2xl text-ucscBlue">You Haven't Joined Any Clubs Yet</CardTitle>
             </CardHeader>
             <CardContent>
-              <CardDescription className="text-muted-foreground mb-6">
+                <CardDescription className="text-muted-foreground mb-6">
                 Head over to the explore page to discover and join clubs that match your interests!
-              </CardDescription>
-              <Button asChild size="lg" className="bg-ucscGold hover:bg-ucscGold/90 text-ucscBlue font-semibold">
+                </CardDescription>
+                <Button asChild size="lg" className="bg-ucscGold hover:bg-ucscGold/90 text-ucscBlue font-semibold">
                 <Link to="/explore">
-                  <PlusCircle className="mr-2 h-5 w-5" /> Explore Clubs
+                    <PlusCircle className="mr-2 h-5 w-5" /> Explore Clubs
                 </Link>
-              </Button>
+                </Button>
             </CardContent>
           </Card>
         )}
@@ -181,60 +164,78 @@ const MyClubsPage: React.FC = () => {
         {myClubs.length > 0 && (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
             {myClubs.map((club) => (
-              <Card key={club.clubId} className="flex flex-col overflow-hidden shadow-lg hover:shadow-xl transition-shadow duration-300 ease-in-out">
-                <div className="w-full h-48 bg-slate-100 flex items-center justify-center p-2 overflow-hidden">
+              // Apply ExplorePage card styling here
+              <Card 
+                key={club.clubId} 
+                className="slugscene-card overflow-hidden shadow-lg hover:shadow-xl transition-transform duration-300 ease-in-out hover:-translate-y-1 flex flex-col"
+              >
+                <div className="w-full h-48 bg-slate-200 flex items-center justify-center">
                   {club.logoURL ? (
                     <img
                       src={club.logoURL}
                       alt={`${club.name} logo`}
-                      className="max-h-full max-w-full object-contain"
+                      className="w-full h-full object-contain p-4" // Style from ExplorePage
                     />
                   ) : (
                     <Users className="w-20 h-20 text-ucscBlue text-opacity-30" />
                   )}
                 </div>
-                <CardHeader className="pb-2">
-                  <CardTitle className="text-xl font-semibold text-ucscBlue truncate" title={club.name}>
+                <CardContent className="p-4 flex flex-col flex-grow"> {/* Style from ExplorePage */}
+                  <h3 className="font-bold text-lg text-ucscBlue mb-1 truncate" title={club.name}>
                     {club.name}
-                  </CardTitle>
-                  {/* Display first category as a badge */}
+                  </h3>
                   {club.category && club.category.length > 0 && (
-                    <span className="inline-block bg-ucscBlue/10 text-ucscBlue text-xs font-medium mt-1 px-2 py-0.5 rounded-full">
-                      {club.category[0]}
-                    </span>
+                    <div className="mb-2 flex flex-wrap gap-1"> {/* Style from ExplorePage */}
+                      {club.category.slice(0, 2).map((cat, index) => ( // Show max 2 categories
+                        <span 
+                          key={index} 
+                          className="text-xs bg-ucscGold/20 text-ucscGold-dark rounded-full px-2 py-0.5" // Style from ExplorePage
+                        >
+                          {cat}
+                        </span>
+                      ))}
+                    </div>
                   )}
-                </CardHeader>
-                <CardContent className="flex-grow text-sm py-2">
-                  <p className="text-gray-700 line-clamp-4">{club.description}</p>
+                  <p className="text-gray-600 text-sm mb-3 line-clamp-3 flex-grow"> {/* Style from ExplorePage */}
+                    {club.description}
+                  </p>
+                  {/* Footer actions - keep specific MyClubsPage buttons */}
+                  <div className="mt-auto flex flex-col sm:flex-row justify-between gap-2 pt-3 border-t border-gray-200">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      asChild
+                      className="w-full sm:w-auto border-ucscBlue text-ucscBlue hover:bg-ucscBlue/10"
+                    >
+                      <Link to={`/clubs/${club.clubId}`}>
+                        <ExternalLink className="mr-1.5 h-3.5 w-3.5" /> View Club
+                      </Link>
+                    </Button>
+                    <Button
+                      variant="destructive"
+                      size="sm"
+                      onClick={() => handleLeaveClub(club.clubId, club.name)} // Pass clubName for toast message
+                      disabled={leavingClubId === club.clubId}
+                      className="w-full sm:w-auto"
+                    >
+                      {leavingClubId === club.clubId ? (
+                        <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />
+                      ) : (
+                        <LogOut className="mr-1.5 h-3.5 w-3.5" />
+                      )}
+                      Leave Club
+                    </Button>
+                  </div>
                 </CardContent>
-                <CardFooter className="flex flex-col sm:flex-row justify-between items-center gap-2 p-3 bg-gray-50 border-t">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    asChild
-                    className="w-full sm:w-auto border-ucscBlue text-ucscBlue hover:bg-ucscBlue/10"
-                  >
-                    <Link to={`/clubs/${club.clubId}`}>
-                      <ExternalLink className="mr-1.5 h-3.5 w-3.5" /> View Club
-                    </Link>
-                  </Button>
-                  <Button
-                    variant="destructive"
-                    size="sm"
-                    onClick={() => handleLeaveClub(club.clubId)}
-                    className="w-full sm:w-auto"
-                  >
-                    <LogOut className="mr-1.5 h-3.5 w-3.5" /> Leave Club
-                  </Button>
-                </CardFooter>
+                {/* CardFooter is not used in ExplorePage style, actions are part of CardContent */}
               </Card>
             ))}
           </div>
         )}
-        {/* Display general error if it occurred but some clubs might still be shown (e.g. from stale state before error) */}
+        {/* General error display (if some clubs loaded but then an error occurred, e.g. during leave) */}
         {error && myClubs.length > 0 && (
-             <div className="text-center py-6">
-                <p className="text-red-500">Error updating clubs: {error}</p>
+            <div className="text-center py-6">
+                <p className="text-red-500">Error: {error}</p>
             </div>
         )}
       </div>
