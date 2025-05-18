@@ -37,6 +37,8 @@ const LoginPage: React.FC = () => {
   const [password, setPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [isGoogleLoading, setIsGoogleLoading] = useState<boolean>(false);
+  const [authCheckLoading, setAuthCheckLoading] = useState<boolean>(true);
+
 
 
   // Effect to check auth state and redirect if user is already logged in
@@ -56,6 +58,7 @@ const LoginPage: React.FC = () => {
         // If currentUser.email is null (e.g. anonymous user, though not explicitly handled here)
         // you might want to handle that case or sign them out too.
       }
+      setAuthCheckLoading(false);
     });
     // Cleanup subscription on unmount
     return () => unsubscribe();
@@ -181,6 +184,15 @@ const LoginPage: React.FC = () => {
     }
   };
 
+  // Render a loading indicator while checking auth state
+  if (authCheckLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-b from-ucscBlue to-blue-900 p-4">
+        <p className="text-white text-xl">Loading authentication...</p> {/* Or a spinner component */}
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-b from-ucscBlue to-blue-900 p-4">
       <Card className="w-full max-w-md bg-white shadow-xl rounded-lg">
@@ -245,7 +257,7 @@ const LoginPage: React.FC = () => {
               className="w-full bg-ucscBlue hover:bg-ucscBlue/90 text-white font-semibold py-2.5 rounded-md transition-colors duration-150"
               disabled={isLoading || isGoogleLoading}
             >
-              {isLoading ? "Signing In..." : "Sign In"}
+              {isLoading ? "Signing In..." : "Sign In/Sign Up"}
             </Button>
 
             <div className="relative w-full flex items-center py-2">
@@ -270,18 +282,6 @@ const LoginPage: React.FC = () => {
                 </>
               )}
             </Button>
-
-            <div className="text-center text-sm text-gray-600 pt-2">
-              Don't have an account?{" "}
-              <button
-                type="button"
-                onClick={() => navigate("/signup")} // Navigate to your signup route
-                className="font-medium text-ucscBlue hover:underline"
-                disabled={isLoading || isGoogleLoading}
-              >
-                Sign Up
-              </button>
-            </div>
           </CardFooter>
         </form>
       </Card>
