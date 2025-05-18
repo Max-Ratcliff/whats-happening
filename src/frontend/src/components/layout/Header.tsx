@@ -74,9 +74,6 @@ const Header: React.FC = () => {
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
               <DropdownMenuItem>
-                <Link to="/profile" className="w-full">Profile</Link>
-              </DropdownMenuItem>
-              <DropdownMenuItem>
                 <Link to="/settings" className="w-full">Settings</Link>
               </DropdownMenuItem>
               <DropdownMenuItem>
